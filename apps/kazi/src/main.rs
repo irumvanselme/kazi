@@ -26,11 +26,14 @@ struct ProjectConfig {
     tasks_id_prefix: String,
 }
 
+struct Project {
+    tasks_json_path: PathBuf,
+    config: ProjectConfig,
+}
+
 struct CreateTaskInput {
     title: String,
 }
-
-const TEST_TASKS_JSON_PATH: &'static str = "/Users/anselme/Developer/tech/kazi/tests/tasks.json";
 
 #[derive(Parser)]
 #[command(
@@ -40,11 +43,11 @@ const TEST_TASKS_JSON_PATH: &'static str = "/Users/anselme/Developer/tech/kazi/t
 )]
 struct KaziCLI {
     #[command(subcommand)]
-    command: Commands,
+    command: Command,
 }
 
 #[derive(Subcommand)]
-enum Commands {
+enum Command {
     /// Initialize a new project
     Init,
     /// List tasks
@@ -56,18 +59,43 @@ enum Commands {
     },
 }
 
-fn list_tasks() -> Vec<Task> {
-    let data = fs::read_to_string(TEST_TASKS_JSON_PATH).expect("TEST TASKS JSON NOT FOUND");
+fn list_tasks(project: &Project) -> Vec<Task> {
+    let data = fs::read_to_string(&project.tasks_json_path).unwrap_or("[]".to_string());
     let tasks: Vec<Task> =
         serde_json::from_str(&data).expect("Failed to parse the test tasks json");
     return tasks;
 }
 
-fn add_tasks(input: CreateTaskInput) {
-    let mut tasks = list_tasks();
+fn get_project(working_directory: PathBuf) -> Project {
+    let mut meta_yaml_file = working_directory.clone();
+    meta_yaml_file.push(".tasks");
+    meta_yaml_file.push("meta.yaml");
+    let meta_yaml_str = fs::read_to_string(meta_yaml_file).unwrap();
+    let project_config = serde_yaml::from_str(&meta_yaml_str).unwrap();
+
+    let mut tasks_json = working_directory.clone();
+    tasks_json.push(".tasks");
+    tasks_json.push("tasks.json");
+
+    return Project {
+        tasks_json_path: tasks_json,
+        config: project_config,
+    };
+}
+
+fn add_tasks(project: &Project, input: CreateTaskInput) {
+    let project_config = &project.config;
+    let tasks_json_path = &project.tasks_json_path;
+
+    let mut tasks = list_tasks(project);
+    let task_id = format!(
+        "{}-{}",
+        project_config.tasks_id_prefix,
+        (tasks.len() + 1).to_string()
+    );
     let task: Task = Task {
         title: input.title,
-        id: "1".to_string(),
+        id: task_id,
         creation_date: chrono::Utc::now(),
         description: "".to_string(),
         stage: TaskStage::Todo,
@@ -76,7 +104,7 @@ fn add_tasks(input: CreateTaskInput) {
     tasks.push(task);
     let tasks_json_string =
         serde_json::to_string_pretty(&tasks).expect("Failed to parse the tasks JSON file");
-    fs::write(TEST_TASKS_JSON_PATH, tasks_json_string).expect("Failed to save the JSON file")
+    fs::write(tasks_json_path, tasks_json_string).expect("Failed to save the JSON file")
 }
 
 fn init_project(working_directory: PathBuf) {
@@ -118,19 +146,21 @@ fn init_project(working_directory: PathBuf) {
 
 fn main() {
     let cli = KaziCLI::parse();
+    let cwd = env::current_dir().unwrap();
 
+    if matches!(cli.command, Command::Init) {
+        init_project(cwd);
+        return;
+    }
+
+    let project = get_project(cwd);
     match cli.command {
-        Commands::Init => {
-            println!("Initializing the project");
-            let cwd = env::current_dir().unwrap();
-            println!("Current working directory = {}", cwd.to_str().unwrap());
-            init_project(cwd);
+        Command::Init => unreachable!(),
+        Command::Add { title } => {
+            add_tasks(&project, CreateTaskInput { title });
         }
-        Commands::Add { title } => {
-            add_tasks(CreateTaskInput { title });
-        }
-        Commands::List => {
-            let tasks = list_tasks();
+        Command::List => {
+            let tasks = list_tasks(&project);
             let pretty_list =
                 serde_json::to_string_pretty(&tasks).expect("Failed to parse the tasks JSON list");
             println!("{}", pretty_list);
