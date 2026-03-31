@@ -3,6 +3,7 @@ use crate::task::{Task, TaskStage};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::{fs, io};
+use thiserror::Error;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ProjectConfig {
@@ -15,9 +16,15 @@ pub struct Project {
     pub repo: Box<dyn Repo>,
 }
 
+#[derive(Error, Debug)]
 pub enum LoadError {
+    #[error("Project is not initialized")]
     ProjectNotInitialized,
+
+    #[error("Project not initiailized correctly. Invalid meta.yaml file.")]
     InvalidMetaYamlFile,
+
+    #[error("Failed to load the project. Unexpected case.")]
     UnexpectedCase(io::Error),
 }
 
@@ -34,7 +41,7 @@ impl Project {
         let meta_yaml_str =
             fs::read_to_string(meta_yaml_file).map_err(LoadError::UnexpectedCase)?;
         let project_config =
-            serde_yaml::from_str(&meta_yaml_str).map_err(|_| LoadError::InvalidMetaYamlFile)?;
+            serde_yaml_ng::from_str(&meta_yaml_str).map_err(|_| LoadError::InvalidMetaYamlFile)?;
 
         return Ok(Project {
             repo,
@@ -68,8 +75,12 @@ impl Project {
     }
 }
 
+#[derive(Error, Debug)]
 pub enum InitProjectError {
+    #[error("Failed to create dot tasks folder {0}")]
     FailedToCreateDotTasksFolder(io::Error),
+
+    #[error("Failed to save the .tasks/meta.yaml file {0}")]
     FailedToSaveMetaYamlFile(io::Error),
 }
 
@@ -113,10 +124,10 @@ pub fn init_project(working_directory: PathBuf) -> Result<(), InitProjectError> 
         };
 
         let project_config_yaml_str =
-            serde_yaml::to_string(&project_config).expect("Failed to parse the project config");
-        return match fs::write(meta_yaml_file, project_config_yaml_str) {
+            serde_yaml_ng::to_string(&project_config).expect("Failed to parse the project config");
+        match fs::write(meta_yaml_file, project_config_yaml_str) {
             Ok(_) => Ok(()),
             Err(io_error) => Err(InitProjectError::FailedToSaveMetaYamlFile(io_error)),
-        };
+        }
     }
 }

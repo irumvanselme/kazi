@@ -3,14 +3,13 @@ mod md_repo;
 mod project;
 mod repo;
 mod task;
+mod tasks_table;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use project::{Project, init_project};
 use std::env;
 
-use crate::{
-    json_repo::JSONRepository, md_repo::MDRepository, project::InitProjectError, repo::Repo,
-};
+use crate::{json_repo::JSONRepository, md_repo::MDRepository, repo::Repo};
 
 #[derive(Debug, Clone, ValueEnum)]
 enum RepoType {
@@ -54,20 +53,9 @@ fn main() {
             Ok(_) => {
                 println!("[INFO] Project initiailized successfully")
             }
-            Err(err) => match err {
-                InitProjectError::FailedToCreateDotTasksFolder(io_err) => {
-                    println!(
-                        "[ERROR] Failed to create the dot tasks folder reason = {}",
-                        io_err.to_string()
-                    )
-                }
-                InitProjectError::FailedToSaveMetaYamlFile(io_err) => {
-                    println!(
-                        "[ERROR] Failed to save meta.yaml file reason = {}",
-                        io_err.to_string()
-                    )
-                }
-            },
+            Err(err) => {
+                println!("[ERROR] Failed to init the project {:?}", err);
+            }
         };
     }
 
@@ -89,17 +77,7 @@ fn main() {
     let project = match Project::load(repository, cwd) {
         Ok(project) => project,
         Err(err) => {
-            match err {
-                project::LoadError::UnexpectedCase(io_err) => {
-                    println!("[ERROR] unexpected case {}", io_err.to_string())
-                }
-                project::LoadError::InvalidMetaYamlFile => {
-                    println!("[ERROR] Invalid meta.yaml file")
-                }
-                project::LoadError::ProjectNotInitialized => {
-                    println!("[ERROR] Project not initialized first run with init command")
-                }
-            }
+            println!("[ERROR] Failed to load project {:?}", err);
             return;
         }
     };
@@ -111,22 +89,9 @@ fn main() {
                 Ok(_) => {
                     println!("[INFO] Task added successfully")
                 }
-                Err(err) => match err {
-                    repo::SaveError::DeserizlizeError => {
-                        println!("Failed to deserialize input task");
-                    }
-                    repo::SaveError::FailedToWriteToCollection => {
-                        println!("Failed to write to the collection")
-                    }
-                    repo::SaveError::ListError(list_err) => match list_err {
-                        repo::ListError::FailedToReadCollection => {
-                            println!("Failed to read the collection")
-                        }
-                        repo::ListError::InvalidCollectionData => {
-                            println!("Invalid collection data")
-                        }
-                    },
-                },
+                Err(err) => {
+                    println!("[ERROR] Failed to add a new command, reason={:?}", err);
+                }
             };
         }
         Command::List => {

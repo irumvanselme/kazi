@@ -12,12 +12,12 @@ pub struct FailedToWriteTasksFile(pub io::Error);
 
 impl JSONRepository {
     pub fn new(working_directory: PathBuf) -> Result<Self, FailedToWriteTasksFile> {
-        let mut tasks_json = working_directory.clone();
-        tasks_json.push(".tasks");
-        tasks_json.push("tasks.json");
+        let mut tasks_json_path = working_directory.clone();
+        tasks_json_path.push(".tasks");
+        tasks_json_path.push("tasks.json");
 
-        if !tasks_json.exists() {
-            match fs::write(&tasks_json, "[]") {
+        if !tasks_json_path.exists() {
+            match fs::write(&tasks_json_path, "[]") {
                 Ok(_) => {}
                 Err(io_err) => return Err(FailedToWriteTasksFile(io_err)),
             }
@@ -25,9 +25,7 @@ impl JSONRepository {
             println!("[INFO] Creating tasks.json file because it did not exist")
         }
 
-        return Ok(Self {
-            tasks_json_path: tasks_json,
-        });
+        Ok(Self { tasks_json_path })
     }
 }
 
@@ -44,7 +42,7 @@ impl Repo for JSONRepository {
 
         tasks.push(task);
         let tasks_json_string =
-            serde_json::to_string_pretty(&tasks).map_err(|_| SaveError::DeserizlizeError)?;
+            serde_json::to_string_pretty(&tasks).map_err(|_| SaveError::DeserializeError)?;
 
         fs::write(&self.tasks_json_path, tasks_json_string)
             .map_err(|_| SaveError::FailedToWriteToCollection)?;

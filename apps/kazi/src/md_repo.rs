@@ -83,7 +83,7 @@ impl Repo for MDRepository {
 
     fn save(&self, task: Task) -> Result<(), SaveError> {
         let header = task.get_header();
-        let header_str = serde_yaml::to_string(&header).unwrap();
+        let header_str = serde_yaml_ng::to_string(&header).unwrap();
         let md_file_content = format!("---\n{}---\n{}", header_str, task.description);
         let target_file_path = format!(
             "{}.md",
@@ -110,7 +110,7 @@ fn parse_frontmatter(content: &str) -> [String; 2] {
 
 fn parse_task_md_file(file_path: &PathBuf) -> Task {
     let [yaml, body] = parse_frontmatter(&fs::read_to_string(file_path).unwrap().to_string());
-    let parsed_yaml: Header = serde_yaml::from_str(&yaml).unwrap();
+    let parsed_yaml: Header = serde_yaml_ng::from_str(&yaml).unwrap();
     return Task {
         id: parsed_yaml.id,
         title: parsed_yaml.title,
@@ -130,7 +130,7 @@ mod md_repo_tests {
         let mut test_project_path = env::current_dir().unwrap();
         test_project_path.push("tests");
         test_project_path.push("test-project");
-        return test_project_path;
+        test_project_path
     }
 
     #[test]
