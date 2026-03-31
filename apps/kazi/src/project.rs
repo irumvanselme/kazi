@@ -10,9 +10,9 @@ pub struct ProjectConfig {
     pub tasks_id_prefix: String,
 }
 
-pub struct Project<R: Repo> {
+pub struct Project {
     pub config: ProjectConfig,
-    pub repo: R,
+    pub repo: Box<dyn Repo>,
 }
 
 pub enum LoadError {
@@ -21,8 +21,8 @@ pub enum LoadError {
     UnexpectedCase(io::Error),
 }
 
-impl<R: Repo> Project<R> {
-    pub fn load(repo: R, working_directory: PathBuf) -> Result<Self, LoadError> {
+impl Project {
+    pub fn load(repo: Box<dyn Repo>, working_directory: PathBuf) -> Result<Self, LoadError> {
         let mut meta_yaml_file = working_directory.clone();
         meta_yaml_file.push(".tasks");
         meta_yaml_file.push("meta.yaml");

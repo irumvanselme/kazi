@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub enum TaskStage {
     Todo,
     InProgress,
     Done,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Task {
     pub id: String,
     pub title: String,

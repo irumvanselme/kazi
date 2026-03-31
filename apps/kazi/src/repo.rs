@@ -1,5 +1,6 @@
 use crate::task::Task;
 
+#[derive(Debug)]
 pub enum ListError {
     FailedToReadCollection,
     InvalidCollectionData,

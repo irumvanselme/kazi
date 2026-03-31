@@ -1,13 +1,22 @@
 mod json_repo;
+mod md_repo;
 mod project;
 mod repo;
 mod task;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use project::{Project, init_project};
 use std::env;
 
-use crate::{json_repo::JSONRepository, project::InitProjectError};
+use crate::{
+    json_repo::JSONRepository, md_repo::MDRepository, project::InitProjectError, repo::Repo,
+};
+
+#[derive(Debug, Clone, ValueEnum)]
+enum RepoType {
+    JSON,
+    MD,
+}
 
 #[derive(Parser)]
 #[command(
@@ -16,6 +25,9 @@ use crate::{json_repo::JSONRepository, project::InitProjectError};
     long_about = "Git for tasks and issues"
 )]
 struct KaziCLI {
+    #[arg(short, long, value_enum, default_value_t = RepoType::MD)]
+    storage_type: RepoType,
+
     #[command(subcommand)]
     command: Command,
 }
@@ -59,16 +71,19 @@ fn main() {
         };
     }
 
-    let repository = match JSONRepository::new(cwd.clone()) {
-        Ok(repo) => repo,
-        Err(err) => {
-            println!(
-                "Failed to write to tasks.json file, reason = {}",
-                err.0.to_string()
-            );
+    let repository: Box<dyn Repo> = match cli.storage_type {
+        RepoType::MD => Box::new(MDRepository::new(&cwd).expect("TODO: Fix me")),
+        RepoType::JSON => Box::new(match JSONRepository::new(cwd.clone()) {
+            Ok(repo) => repo,
+            Err(err) => {
+                println!(
+                    "[ERROR] Failed to write to tasks.json file, reason = {}. Run init command first",
+                    err.0.to_string()
+                );
 
-            return;
-        }
+                return;
+            }
+        }),
     };
 
     let project = match Project::load(repository, cwd) {
