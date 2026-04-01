@@ -7,6 +7,12 @@ pub enum TaskStage {
     Done,
 }
 
+impl TaskStage {
+    pub fn as_string(&self) -> String {
+        return format!("{:?}", self);
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Task {
     pub id: String,

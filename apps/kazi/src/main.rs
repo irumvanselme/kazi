@@ -9,7 +9,9 @@ use clap::{Parser, Subcommand, ValueEnum};
 use project::{Project, init_project};
 use std::env;
 
-use crate::{json_repo::JSONRepository, md_repo::MDRepository, repo::Repo};
+use crate::{
+    json_repo::JSONRepository, md_repo::MDRepository, repo::Repo, tasks_table::TasksTable,
+};
 
 #[derive(Debug, Clone, ValueEnum)]
 enum RepoType {
@@ -96,9 +98,7 @@ fn main() {
         }
         Command::List => {
             let tasks = project.list_tasks();
-            let pretty_list =
-                serde_json::to_string_pretty(&tasks).expect("Failed to parse the tasks JSON list");
-            println!("{}", pretty_list);
+            TasksTable::new(&tasks).draw()
         }
     }
 }
